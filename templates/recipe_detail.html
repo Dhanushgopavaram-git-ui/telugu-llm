@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.name }} - తెలుగు వంటకాలు{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Recipe Header -->
+            <div class="recipe-header mb-4">
+                <h1 class="mb-3">{{ recipe.name }}</h1>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if recipe.difficulty %}
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-star"></i> {{ recipe.difficulty }}
+                    </span>
+                    {% endif %}
+                    {% if recipe.cooking_time %}
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-clock"></i> {{ recipe.cooking_time }} నిమిషాలు
+                    </span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-utensils"></i> తెలుగు వంటకం
+                    </span>
+                </div>
+            </div>
+
+            <!-- Ingredients Section -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> పదార్థాలు
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="ingredients-list">
+                        {% for ingredient in recipe.ingredients %}
+                        <li>{{ ingredient }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Instructions Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-tasks"></i> తయారీ విధానం
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="instructions">
+                        {{ recipe.instructions|safe|replace('\n', '<br>') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Nutrition Information -->
+            {% if recipe.nutrition and recipe.nutrition.calories %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> పోషకాహార సమాచారం
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="display-6 fw-bold text-primary">{{ recipe.nutrition.calories|round(1) }}</div>
+                        <div class="text-muted">పోర్షన్ కి కేలరీలు</div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.protein|round(1) }}g</div>
+                            <div class="stat-label">ప్రోటీన్</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.carbs|round(1) }}g</div>
+                            <div class="stat-label">కార్బోహైడ్రేట్</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.fat|round(1) }}g</div>
+                            <div class="stat-label">కొవ్వు</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.fiber|round(1) }}g</div>
+                            <div class="stat-label">ఫైబర్</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.sugar|round(1) }}g</div>
+                            <div class="stat-label">చక్కెర</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ recipe.nutrition.sodium|round(1) }}mg</div>
+                            <div class="stat-label">సోడియం</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recipe Info -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> వంటక సమాచారం
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ recipe.ingredients|length }}</div>
+                                <div class="text-muted small">పదార్థాలు</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h4 text-primary">{{ recipe.instructions.split('\n')|length }}</div>
+                                <div class="text-muted small">దశలు</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if recipe.created_at %}
+                    <hr>
+                    <div class="text-muted small">
+                        <i class="fas fa-calendar"></i> {{ recipe.created_at.split(' ')[0] }}న జోడించబడింది
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="mt-4">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-primary w-100 mb-2">
+                    <i class="fas fa-arrow-left"></i> వంటకాలకు తిరిగి వెళ్లండి
+                </a>
+                <a href="{{ url_for('add_recipe') }}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus"></i> కొత్త వంటకం జోడించండి
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add line breaks to instructions
+    document.addEventListener('DOMContentLoaded', function() {
+        const instructions = document.querySelector('.instructions');
+        if (instructions) {
+            instructions.innerHTML = instructions.innerHTML.replace(/\n/g, '<br>');
+        }
+    });
+</script>
+{% endblock %} 

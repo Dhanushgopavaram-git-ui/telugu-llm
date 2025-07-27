@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Telugu Recipes - Home{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-dark mb-3">
+            <i class="fas fa-utensils text-primary"></i> తెలుగు వంటకాలు
+        </h1>
+        <p class="lead text-muted">పోషకాహార సమాచారంతో నిజమైన తెలుగు వంటకాలను కనుగొనండి</p>
+        
+        <!-- Search Form -->
+        <form action="{{ url_for('search') }}" method="GET" class="d-flex justify-content-center mb-4">
+            <div class="input-group" style="max-width: 500px;">
+                <input type="text" name="q" class="form-control search-box" placeholder="వంటకాల పేరు లేదా పదార్థాలను వెతకండి..." value="{{ request.args.get('q', '') }}">
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i> వెతకండి
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ recipes|length }}</div>
+                <div class="stat-label">మొత్తం వంటకాలు</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ recipes|selectattr('nutrition.calories')|list|length }}</div>
+                <div class="stat-label">పోషకాహారంతో</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ recipes|selectattr('cooking_time')|list|length }}</div>
+                <div class="stat-label">సమయంతో</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-item">
+                <div class="stat-value">{{ recipes|selectattr('difficulty')|list|length }}</div>
+                <div class="stat-label">కష్టత్వంతో</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipes Grid -->
+    {% if recipes %}
+        <div class="row">
+            {% for recipe in recipes %}
+            <div class="col-lg-6 col-xl-4 mb-4">
+                <div class="recipe-card">
+                    <div class="recipe-header">
+                        <h5 class="mb-2">{{ recipe.name }}</h5>
+                        <div class="d-flex justify-content-between align-items-center">
+                            {% if recipe.difficulty %}
+                            <span class="badge bg-light text-dark">{{ recipe.difficulty }}</span>
+                            {% endif %}
+                            {% if recipe.cooking_time %}
+                            <span class="badge bg-light text-dark">
+                                <i class="fas fa-clock"></i> {{ recipe.cooking_time }} min
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        <!-- Nutrition Info -->
+                        {% if recipe.nutrition and recipe.nutrition.calories %}
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">పోషకాహారం (పోర్షన్ కి)</h6>
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ recipe.nutrition.calories|round(1) }}</div>
+                                    <div class="stat-label">కేలరీలు</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ recipe.nutrition.protein|round(1) }}g</div>
+                                    <div class="stat-label">ప్రోటీన్</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ recipe.nutrition.carbs|round(1) }}g</div>
+                                    <div class="stat-label">కార్బోహైడ్రేట్</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">{{ recipe.nutrition.fat|round(1) }}g</div>
+                                    <div class="stat-label">కొవ్వు</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Ingredients Preview -->
+                        <div class="mb-3">
+                            <h6 class="text-muted mb-2">ముఖ్య పదార్థాలు</h6>
+                            <ul class="ingredients-list">
+                                {% for ingredient in recipe.ingredients[:3] %}
+                                <li>{{ ingredient }}</li>
+                                {% endfor %}
+                                {% if recipe.ingredients|length > 3 %}
+                                <li class="text-muted">... and {{ recipe.ingredients|length - 3 }} more</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
+                        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-primary w-100">
+                            <i class="fas fa-eye"></i> View Recipe
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-utensils fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">No recipes found</h4>
+            <p class="text-muted">Start by adding some recipes or initialize the database with sample recipes.</p>
+            <div class="mt-3">
+                <a href="{{ url_for('add_recipe') }}" class="btn btn-primary me-2">
+                    <i class="fas fa-plus"></i> Add Recipe
+                </a>
+                <a href="{{ url_for('initialize') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-database"></i> Initialize
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %} 

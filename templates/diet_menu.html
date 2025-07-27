@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}తెలుగు ఆహార పట్టిక జనరేటర్{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-dark mb-3">
+            <i class="fas fa-brain text-primary"></i> తెలుగు ఆహార పట్టిక జనరేటర్
+        </h1>
+        <p class="lead text-muted">AI-ఆధారిత వ్యక్తిగత ఆహార పట్టికలు తెలుగులో</p>
+    </div>
+
+    <!-- Diet Input Form -->
+    <div class="row justify-content-center mb-5">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-edit"></i> మీ ఆహార ప్రాధాన్యతల గురించి చెప్పండి
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="dietForm">
+                        <div class="mb-3">
+                            <label for="userInput" class="form-label">
+                                <i class="fas fa-comment"></i> మీ ఆహార అవసరాలను వివరించండి (ఆంగ్లం లేదా తెలుగు)
+                            </label>
+                            <textarea class="form-control" id="userInput" name="user_input" rows="4" 
+                                      placeholder="Example: I want a vegetarian diet for weight loss, 1500 calories per day for a week. / నాకు బరువు తగ్గించడానికి శాకాహార ఆహారం కావాలి, రోజుకు 1500 కేలరీలు, ఒక వారం పాటు.">{{ user_input or '' }}</textarea>
+                        </div>
+                        
+                        <!-- Quick Options -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-lightning-bolt"></i> త్వరిత ఎంపికలు
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-primary quick-option" data-text="vegetarian diet for weight loss">
+                                            <i class="fas fa-leaf"></i> బరువు తగ్గించే ఆహారం
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary quick-option" data-text="diabetic diet low sugar">
+                                            <i class="fas fa-heartbeat"></i> మధుమేహ ఆహారం
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="d-grid gap-2">
+                                        <button type="button" class="btn btn-outline-primary quick-option" data-text="protein rich diet for muscle gain">
+                                            <i class="fas fa-dumbbell"></i> ప్రోటీన్ ధన్యం
+                                        </button>
+                                        <button type="button" class="btn btn-outline-primary quick-option" data-text="vegetarian diet for energy boost">
+                                            <i class="fas fa-bolt"></i> శక్తి పెంపు
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-magic"></i> ఆహార పట్టిక తయారు చేయండి
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diet Plan Results -->
+    {% if diet_plan and not diet_plan.error %}
+    <div class="row">
+        <div class="col-12">
+            <!-- Nutrition Summary -->
+            {% if diet_plan.nutrition_summary %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-pie"></i> రోజువారీ పోషకాహార సారాంశం
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-primary">{{ diet_plan.nutrition_summary.calories }}</div>
+                                <div class="stat-label">కేలరీలు</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-success">{{ diet_plan.nutrition_summary.protein }}g</div>
+                                <div class="stat-label">ప్రోటీన్</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-warning">{{ diet_plan.nutrition_summary.carbs }}g</div>
+                                <div class="stat-label">కార్బోహైడ్రేట్</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stat-item text-center">
+                                <div class="stat-value text-info">{{ diet_plan.nutrition_summary.fat }}g</div>
+                                <div class="stat-label">కొవ్వు</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Meal Plan -->
+            {% if diet_plan.meal_plan %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt"></i> మీ వ్యక్తిగత ఆహార పట్టిక
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for day_key, day_data in diet_plan.meal_plan.items() %}
+                    <div class="meal-day mb-4">
+                                                    <h6 class="text-primary mb-3">
+                                <i class="fas fa-calendar-day"></i> {{ day_data.day }}వ రోజు - {{ day_data.date }}
+                                <small class="text-muted d-block">{{ day_data.telugu_date }}</small>
+                            </h6>
+                        
+                        <div class="row">
+                            {% for meal_type, meal in day_data.meals.items() %}
+                            {% if meal %}
+                            <div class="col-md-6 col-lg-3 mb-3">
+                                <div class="recipe-card">
+                                    <div class="recipe-header">
+                                        <h6 class="mb-1">{{ meal_type|title }}</h6>
+                                        <small>{{ meal.name }}</small>
+                                    </div>
+                                    <div class="p-3">
+                                        {% if meal.nutrition %}
+                                        <div class="small text-muted mb-2">
+                                            <i class="fas fa-fire"></i> {{ meal.nutrition.calories|round(1) }} cal
+                                            <i class="fas fa-dumbbell ms-2"></i> {{ meal.nutrition.protein|round(1) }}g protein
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if meal.cooking_time %}
+                                        <div class="small text-muted">
+                                            <i class="fas fa-clock"></i> {{ meal.cooking_time }} min
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <a href="{{ url_for('recipe_detail', recipe_id=meal.id) }}" class="btn btn-sm btn-outline-primary mt-2">
+                                            <i class="fas fa-eye"></i> వంటకం చూడండి
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recommendations -->
+            {% if diet_plan.recommendations %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-lightbulb"></i> తెలుగు ఆరోగ్య సూచనలు
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for recommendation in diet_plan.recommendations %}
+                        <li class="list-group-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            {{ recommendation }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Error Message -->
+    {% if diet_plan and diet_plan.error %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle"></i> {{ diet_plan.error }}
+    </div>
+    {% endif %}
+
+    <!-- Diet Tips -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle"></i> ఆహార జనరేటర్ ఎలా ఉపయోగించాలి
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>ఆంగ్ల ఉదాహరణలు:</h6>
+                            <ul>
+                                <li>"vegetarian diet for weight loss, 1500 calories"</li>
+                                <li>"diabetic diet low sugar for a week"</li>
+                                <li>"protein rich diet for muscle gain"</li>
+                                <li>"vegan diet for energy boost"</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>తెలుగు ఉదాహరణలు:</h6>
+                            <ul>
+                                <li>"బరువు తగ్గించడానికి శాకాహార ఆహారం"</li>
+                                <li>"మధుమేహం కోసం తక్కువ చక్కెర ఆహారం"</li>
+                                <li>"ప్రోటీన్ ఎక్కువగా ఉన్న ఆహారం"</li>
+                                <li>"శక్తి పెంపుకు శుద్ధ శాకాహారం"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Quick option buttons
+    const quickOptions = document.querySelectorAll('.quick-option');
+    const userInput = document.getElementById('userInput');
+    
+    quickOptions.forEach(button => {
+        button.addEventListener('click', function() {
+            userInput.value = this.dataset.text;
+        });
+    });
+    
+    // Auto-resize textarea
+    userInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}Advanced Recipe Search{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="text-center mb-5">
+        <h1 class="display-4 fw-bold text-dark mb-3">
+            <i class="fas fa-search-plus text-primary"></i> Advanced Recipe Search
+        </h1>
+        <p class="lead text-muted">Find recipes with advanced filters and customization options</p>
+    </div>
+
+    <!-- Search Filters -->
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-filter"></i> Filters
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="advancedSearchForm">
+                        <!-- Search Query -->
+                        <div class="mb-3">
+                            <label for="searchQuery" class="form-label">Search Query</label>
+                            <input type="text" class="form-control" id="searchQuery" placeholder="Recipe name or ingredients...">
+                        </div>
+
+                        <!-- Category Filter -->
+                        <div class="mb-3">
+                            <label for="categoryFilter" class="form-label">Category</label>
+                            <select class="form-select" id="categoryFilter">
+                                <option value="">All Categories</option>
+                                <option value="breakfast">Breakfast</option>
+                                <option value="main_course">Main Course</option>
+                                <option value="side_dish">Side Dish</option>
+                                <option value="snack">Snack</option>
+                                <option value="dessert">Dessert</option>
+                            </select>
+                        </div>
+
+                        <!-- Difficulty Filter -->
+                        <div class="mb-3">
+                            <label for="difficultyFilter" class="form-label">Difficulty</label>
+                            <select class="form-select" id="difficultyFilter">
+                                <option value="">All Difficulties</option>
+                                <option value="Easy">Easy</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Hard">Hard</option>
+                            </select>
+                        </div>
+
+                        <!-- Cooking Time Filter -->
+                        <div class="mb-3">
+                            <label for="cookingTimeFilter" class="form-label">Max Cooking Time (minutes)</label>
+                            <input type="range" class="form-range" id="cookingTimeFilter" min="0" max="120" value="60">
+                            <div class="text-center">
+                                <span id="cookingTimeValue">60</span> minutes
+                            </div>
+                        </div>
+
+                        <!-- Tags Filter -->
+                        <div class="mb-3">
+                            <label class="form-label">Tags</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="vegetarian" id="tagVegetarian">
+                                <label class="form-check-label" for="tagVegetarian">Vegetarian</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="protein" id="tagProtein">
+                                <label class="form-check-label" for="tagProtein">Protein Rich</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="healthy" id="tagHealthy">
+                                <label class="form-check-label" for="tagHealthy">Healthy</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="quick" id="tagQuick">
+                                <label class="form-check-label" for="tagQuick">Quick</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="traditional" id="tagTraditional">
+                                <label class="form-check-label" for="tagTraditional">Traditional</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="spicy" id="tagSpicy">
+                                <label class="form-check-label" for="tagSpicy">Spicy</label>
+                            </div>
+                        </div>
+
+                        <!-- Nutrition Filters -->
+                        <div class="mb-3">
+                            <label class="form-label">Nutrition Preferences</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="low_calorie" id="nutritionLowCalorie">
+                                <label class="form-check-label" for="nutritionLowCalorie">Low Calorie</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="high_protein" id="nutritionHighProtein">
+                                <label class="form-check-label" for="nutritionHighProtein">High Protein</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" value="low_sugar" id="nutritionLowSugar">
+                                <label class="form-check-label" for="nutritionLowSugar">Low Sugar</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="clearFilters">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="col-lg-9">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list"></i> Search Results
+                    </h5>
+                    <span class="badge bg-primary" id="resultCount">0 recipes</span>
+                </div>
+                <div class="card-body">
+                    <div id="searchResults" class="row">
+                        <!-- Results will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.getElementById('advancedSearchForm');
+    const searchResults = document.getElementById('searchResults');
+    const resultCount = document.getElementById('resultCount');
+    const cookingTimeFilter = document.getElementById('cookingTimeFilter');
+    const cookingTimeValue = document.getElementById('cookingTimeValue');
+    const clearFiltersBtn = document.getElementById('clearFilters');
+
+    // Update cooking time display
+    cookingTimeFilter.addEventListener('input', function() {
+        cookingTimeValue.textContent = this.value;
+    });
+
+    // Handle form submission
+    searchForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        performAdvancedSearch();
+    });
+
+    // Clear filters
+    clearFiltersBtn.addEventListener('click', function() {
+        searchForm.reset();
+        cookingTimeValue.textContent = '60';
+        searchResults.innerHTML = '';
+        resultCount.textContent = '0 recipes';
+    });
+
+    function performAdvancedSearch() {
+        const formData = new FormData(searchForm);
+        const searchParams = new URLSearchParams();
+
+        // Add search query
+        const query = document.getElementById('searchQuery').value;
+        if (query) searchParams.append('q', query);
+
+        // Add category
+        const category = document.getElementById('categoryFilter').value;
+        if (category) searchParams.append('category', category);
+
+        // Add difficulty
+        const difficulty = document.getElementById('difficultyFilter').value;
+        if (difficulty) searchParams.append('difficulty', difficulty);
+
+        // Add cooking time
+        const cookingTime = cookingTimeFilter.value;
+        if (cookingTime) searchParams.append('max_time', cookingTime);
+
+        // Add tags
+        const selectedTags = [];
+        document.querySelectorAll('input[type="checkbox"]:checked').forEach(checkbox => {
+            selectedTags.push(checkbox.value);
+        });
+        if (selectedTags.length > 0) {
+            selectedTags.forEach(tag => searchParams.append('tags', tag));
+        }
+
+        // Perform search
+        fetch(`/api/advanced_search?${searchParams.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                displayResults(data);
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                searchResults.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error performing search</div></div>';
+            });
+    }
+
+    function displayResults(recipes) {
+        resultCount.textContent = `${recipes.length} recipes`;
+        
+        if (recipes.length === 0) {
+            searchResults.innerHTML = '<div class="col-12"><div class="alert alert-info">No recipes found matching your criteria</div></div>';
+            return;
+        }
+
+        const resultsHTML = recipes.map(recipe => `
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="recipe-card h-100">
+                    <div class="recipe-header">
+                        <h6 class="mb-1">${recipe.name}</h6>
+                        <div class="recipe-meta">
+                            <span class="badge bg-secondary">${recipe.category || 'Main Course'}</span>
+                            <span class="badge bg-info">${recipe.difficulty || 'Medium'}</span>
+                            ${recipe.cooking_time ? `<span class="badge bg-warning">${recipe.cooking_time} min</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="p-3">
+                        ${recipe.nutrition ? `
+                            <div class="small text-muted mb-2">
+                                <i class="fas fa-fire"></i> ${recipe.nutrition.calories || 0} cal
+                                <i class="fas fa-dumbbell ms-2"></i> ${recipe.nutrition.protein || 0}g protein
+                            </div>
+                        ` : ''}
+                        
+                        <div class="recipe-tags mb-2">
+                            ${(recipe.tags || []).map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('')}
+                        </div>
+                        
+                        <a href="/recipe/${recipe.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-eye"></i> View Recipe
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        searchResults.innerHTML = resultsHTML;
+    }
+
+    // Load initial results
+    performAdvancedSearch();
+});
+</script>
+{% endblock %} 

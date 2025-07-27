@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Add Recipe - Telugu Recipes{% endblock %}
+
+{% block content %}
+<div class="main-container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="text-center mb-4">
+                <h1 class="display-5 fw-bold text-dark">
+                    <i class="fas fa-plus-circle text-primary"></i> Add New Recipe
+                </h1>
+                <p class="lead text-muted">Share your favorite Telugu recipe with the community</p>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form id="recipeForm">
+                        <!-- Recipe Name -->
+                        <div class="mb-3">
+                            <label for="recipeName" class="form-label">
+                                <i class="fas fa-utensils"></i> Recipe Name
+                            </label>
+                            <input type="text" class="form-control" id="recipeName" name="name" required>
+                        </div>
+
+                        <!-- Ingredients -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-list"></i> Ingredients
+                            </label>
+                            <div id="ingredientsContainer">
+                                <div class="input-group mb-2">
+                                    <input type="text" class="form-control ingredient-input" placeholder="e.g., 2 cups rice" required>
+                                    <button type="button" class="btn btn-outline-danger remove-ingredient" style="display: none;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addIngredient">
+                                <i class="fas fa-plus"></i> Add Ingredient
+                            </button>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div class="mb-3">
+                            <label for="instructions" class="form-label">
+                                <i class="fas fa-tasks"></i> Instructions
+                            </label>
+                            <textarea class="form-control" id="instructions" name="instructions" rows="8" 
+                                      placeholder="Enter step-by-step cooking instructions..." required></textarea>
+                        </div>
+
+                        <!-- Cooking Time and Difficulty -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cookingTime" class="form-label">
+                                        <i class="fas fa-clock"></i> Cooking Time (minutes)
+                                    </label>
+                                    <input type="number" class="form-control" id="cookingTime" name="cooking_time" min="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="difficulty" class="form-label">
+                                        <i class="fas fa-star"></i> Difficulty Level
+                                    </label>
+                                    <select class="form-select" id="difficulty" name="difficulty">
+                                        <option value="Easy">Easy</option>
+                                        <option value="Medium" selected>Medium</option>
+                                        <option value="Hard">Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Save Recipe
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="card mt-4" id="previewSection" style="display: none;">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-eye"></i> Recipe Preview
+                    </h5>
+                </div>
+                <div class="card-body" id="previewContent">
+                    <!-- Preview content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('recipeForm');
+    const ingredientsContainer = document.getElementById('ingredientsContainer');
+    const addIngredientBtn = document.getElementById('addIngredient');
+    const previewSection = document.getElementById('previewSection');
+    const previewContent = document.getElementById('previewContent');
+
+    // Add ingredient field
+    addIngredientBtn.addEventListener('click', function() {
+        const ingredientGroup = document.createElement('div');
+        ingredientGroup.className = 'input-group mb-2';
+        ingredientGroup.innerHTML = `
+            <input type="text" class="form-control ingredient-input" placeholder="e.g., 1 tbsp oil" required>
+            <button type="button" class="btn btn-outline-danger remove-ingredient">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+        ingredientsContainer.appendChild(ingredientGroup);
+        updateRemoveButtons();
+    });
+
+    // Remove ingredient field
+    ingredientsContainer.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-ingredient') || e.target.closest('.remove-ingredient')) {
+            e.target.closest('.input-group').remove();
+            updateRemoveButtons();
+        }
+    });
+
+    function updateRemoveButtons() {
+        const ingredientGroups = ingredientsContainer.querySelectorAll('.input-group');
+        ingredientGroups.forEach((group, index) => {
+            const removeBtn = group.querySelector('.remove-ingredient');
+            if (ingredientGroups.length === 1) {
+                removeBtn.style.display = 'none';
+            } else {
+                removeBtn.style.display = 'block';
+            }
+        });
+    }
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const ingredients = Array.from(document.querySelectorAll('.ingredient-input'))
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+
+        const recipeData = {
+            name: formData.get('name'),
+            ingredients: ingredients,
+            instructions: formData.get('instructions'),
+            cooking_time: parseInt(formData.get('cooking_time')) || null,
+            difficulty: formData.get('difficulty')
+        };
+
+        // Send to server
+        fetch('/add_recipe', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(recipeData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Recipe added successfully!');
+                window.location.href = '/';
+            } else {
+                alert('Error adding recipe. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error adding recipe. Please try again.');
+        });
+    });
+
+    // Real-time preview
+    function updatePreview() {
+        const name = document.getElementById('recipeName').value;
+        const ingredients = Array.from(document.querySelectorAll('.ingredient-input'))
+            .map(input => input.value.trim())
+            .filter(value => value !== '');
+        const instructions = document.getElementById('instructions').value;
+        const cookingTime = document.getElementById('cookingTime').value;
+        const difficulty = document.getElementById('difficulty').value;
+
+        if (name || ingredients.length > 0 || instructions) {
+            previewSection.style.display = 'block';
+            
+            let previewHTML = '';
+            if (name) {
+                previewHTML += `<h5 class="text-primary">${name}</h5>`;
+            }
+            
+            if (ingredients.length > 0) {
+                previewHTML += `<h6 class="text-muted mt-3">Ingredients:</h6><ul>`;
+                ingredients.forEach(ingredient => {
+                    if (ingredient) {
+                        previewHTML += `<li>${ingredient}</li>`;
+                    }
+                });
+                previewHTML += `</ul>`;
+            }
+            
+            if (instructions) {
+                previewHTML += `<h6 class="text-muted mt-3">Instructions:</h6>`;
+                previewHTML += `<p>${instructions}</p>`;
+            }
+            
+            if (cookingTime || difficulty) {
+                previewHTML += `<div class="mt-3">`;
+                if (cookingTime) {
+                    previewHTML += `<span class="badge bg-primary me-2"><i class="fas fa-clock"></i> ${cookingTime} min</span>`;
+                }
+                if (difficulty) {
+                    previewHTML += `<span class="badge bg-secondary">${difficulty}</span>`;
+                }
+                previewHTML += `</div>`;
+            }
+            
+            previewContent.innerHTML = previewHTML;
+        } else {
+            previewSection.style.display = 'none';
+        }
+    }
+
+    // Add event listeners for preview
+    document.getElementById('recipeName').addEventListener('input', updatePreview);
+    document.getElementById('instructions').addEventListener('input', updatePreview);
+    document.getElementById('cookingTime').addEventListener('input', updatePreview);
+    document.getElementById('difficulty').addEventListener('change', updatePreview);
+    
+    ingredientsContainer.addEventListener('input', function(e) {
+        if (e.target.classList.contains('ingredient-input')) {
+            updatePreview();
+        }
+    });
+
+    // Initialize
+    updateRemoveButtons();
+});
+</script>
+{% endblock %} 
