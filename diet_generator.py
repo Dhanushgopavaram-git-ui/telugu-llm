@@ -127,6 +127,8 @@ class TeluguDietGenerator:
         """Filter recipes based on user preferences"""
         filtered = []
         
+        # First pass: filter by diet type
+        diet_filtered = []
         for recipe in recipes:
             # Check diet type using tags
             if preferences['diet_type'] == 'vegetarian':
@@ -135,38 +137,73 @@ class TeluguDietGenerator:
             elif preferences['diet_type'] == 'vegan':
                 if any(tag in recipe.get('tags', []) for tag in ['non_vegetarian', 'dairy']):
                     continue
+            diet_filtered.append(recipe)
+        
+        # If no recipes match diet type, use all recipes
+        if not diet_filtered:
+            diet_filtered = recipes
+        
+        # Second pass: filter by health goal
+        health_goal_filtered = []
+        
+        # Try to find recipes that match health goal
+        for recipe in diet_filtered:
+            match = False
             
             # Check health goals using tags and nutrition
             if preferences['health_goal'] == 'diabetic':
-                sugar = recipe['nutrition'].get('sugar') if recipe['nutrition'] else 0
-                if sugar and sugar > 20:  # High sugar content
-                    continue
+                # Low sugar recipes
+                sugar = recipe['nutrition'].get('sugar', 0)
+                if sugar is not None and sugar <= 10:  # Low sugar content
+                    match = True
             elif preferences['health_goal'] == 'weight_loss':
-                calories = recipe['nutrition'].get('calories') if recipe['nutrition'] else 0
-                if calories and calories > 400:  # High calorie
+                # Low calorie recipes
+                calories = recipe['nutrition'].get('calories', 0)
+                if calories is not None and calories <= 300:  # Low calorie
+                    match = True
+                # Or recipes with healthy tag
+                if 'healthy' in recipe.get('tags', []):
+                    match = True
+            elif preferences['health_goal'] == 'weight_gain':
+                # High calorie recipes
+                calories = recipe['nutrition'].get('calories', 0)
+                if calories is not None and calories >= 500:  # High calorie
+                    match = True
+            elif preferences['health_goal'] == 'energy_boost' or preferences['health_goal'] == 'protein_rich':
+                # High protein recipes
+                protein = recipe['nutrition'].get('protein', 0)
+                if protein is not None and protein >= 10:  # High protein
+                    match = True
+                # Or recipes with protein tag
+                if 'protein' in recipe.get('tags', []):
+                    match = True
+            
+            if match:
+                health_goal_filtered.append(recipe)
+        
+        # If no recipes match health goal, use diet filtered recipes
+        if not health_goal_filtered:
+            health_goal_filtered = diet_filtered
+        
+        # Third pass: filter by meal type preferences
+        for recipe in health_goal_filtered:
+            # Check for allergies
+            if preferences['allergies']:
+                ingredients_text = ' '.join(recipe.get('ingredients', [])).lower()
+                if any(allergy.lower() in ingredients_text for allergy in preferences['allergies']):
                     continue
-            elif preferences['health_goal'] == 'protein_rich':
-                protein = recipe['nutrition'].get('protein') if recipe['nutrition'] else 0
-                if protein and protein < 10:  # Low protein
-                    continue
             
-            # Check for healthy tags
-            if preferences['health_goal'] == 'weight_loss' and 'healthy' in recipe.get('tags', []):
-                filtered.append(recipe)
-                continue
-            
-            # Check for protein tags
-            if preferences['health_goal'] == 'protein_rich' and 'protein' in recipe.get('tags', []):
-                filtered.append(recipe)
-                continue
-            
-            # Check for quick recipes for busy schedules
-            if preferences.get('quick_cooking', False) and recipe.get('cooking_time', 0) <= 20:
-                filtered.append(recipe)
-                continue
-            
-            # Default: include if no specific filters apply
             filtered.append(recipe)
+        
+        # If no recipes match after all filtering, use original recipes
+        if not filtered:
+            filtered = recipes
+        
+        # Ensure we have enough variety by using all recipes if filtered set is too small
+        if len(filtered) < 5:
+            filtered = recipes
+        
+        return filtered
         
         return filtered
     
@@ -174,9 +211,17 @@ class TeluguDietGenerator:
         """Create a meal plan for the specified duration"""
         meal_plan = {}
         
+        # Make a copy of recipes to avoid modifying the original list
+        available_recipes = recipes.copy()
+        
         for day in range(1, preferences['duration'] + 1):
             date = datetime.now() + timedelta(days=day-1)
             day_key = date.strftime('%Y-%m-%d')
+            
+            # Set a different seed for each day to ensure variety
+            day_seed = f"{preferences['diet_type']}_{preferences['health_goal']}_{day}"
+            day_seed_val = sum(ord(c) for c in day_seed)
+            random.seed(day_seed_val)
             
             meal_plan[day_key] = {
                 'day': day,
@@ -185,51 +230,124 @@ class TeluguDietGenerator:
                 'meals': {}
             }
             
+            # Track selected recipes for this day to avoid duplicates
+            selected_recipes_ids = set()
+            
             # Generate meals for the day
             if preferences['meals_per_day'] >= 3:
-                meal_plan[day_key]['meals']['breakfast'] = self._select_meal(recipes, 'breakfast', preferences)
-                meal_plan[day_key]['meals']['lunch'] = self._select_meal(recipes, 'lunch', preferences)
-                meal_plan[day_key]['meals']['dinner'] = self._select_meal(recipes, 'dinner', preferences)
+                for meal_type in ['breakfast', 'lunch', 'dinner']:
+                    meal = self._select_meal(recipes, meal_type, preferences)
+                    
+                    # Try to avoid duplicates within the same day if we have enough recipes
+                    if meal and len(recipes) > preferences['meals_per_day']:
+                        attempts = 0
+                        while meal.get('id') in selected_recipes_ids and attempts < 3:
+                            meal = self._select_meal(recipes, meal_type, preferences)
+                            attempts += 1
+                    
+                    meal_plan[day_key]['meals'][meal_type] = meal
+                    if meal:
+                        selected_recipes_ids.add(meal.get('id'))
             
             if preferences['meals_per_day'] >= 4:
-                meal_plan[day_key]['meals']['snack'] = self._select_meal(recipes, 'snack', preferences)
+                snack = self._select_meal(recipes, 'snack', preferences)
+                
+                # Try to avoid duplicates if possible
+                if snack and len(recipes) > preferences['meals_per_day']:
+                    attempts = 0
+                    while snack.get('id') in selected_recipes_ids and attempts < 3:
+                        snack = self._select_meal(recipes, 'snack', preferences)
+                        attempts += 1
+                
+                meal_plan[day_key]['meals']['snack'] = snack
+                if snack:
+                    selected_recipes_ids.add(snack.get('id'))
+            
+            # Reset random seed after each day
+            random.seed()
         
         return meal_plan
     
+    
     def _select_meal(self, recipes, meal_type, preferences):
         """Select appropriate recipe for a meal type"""
+        import random
+        
+        # Set a different seed based on preferences to ensure different menus for different conditions
+        seed_str = f"{preferences['diet_type']}_{preferences['health_goal']}_{meal_type}"
+        seed_val = sum(ord(c) for c in seed_str)
+        random.seed(seed_val)
+        
         suitable_recipes = []
         
+        # First try to find recipes that match the meal type category exactly
+        primary_matches = []
         for recipe in recipes:
-            # Use category and tags for better meal selection
-            if meal_type == 'breakfast':
-                if (recipe.get('category') == 'breakfast' or 
-                    'breakfast' in recipe.get('tags', []) or
-                    (recipe.get('cooking_time', 0) <= 20)):
-                    suitable_recipes.append(recipe)
-            
-            elif meal_type == 'lunch':
-                if (recipe.get('category') == 'main_course' or
-                    recipe.get('nutrition', {}).get('calories', 0) >= 300):
-                    suitable_recipes.append(recipe)
-            
-            elif meal_type == 'dinner':
-                if (recipe.get('category') == 'main_course' or
-                    recipe.get('nutrition', {}).get('calories', 0) <= 400):
-                    suitable_recipes.append(recipe)
-            
-            elif meal_type == 'snack':
-                if (recipe.get('category') == 'snack' or
-                    'snack' in recipe.get('tags', []) or
-                    recipe.get('nutrition', {}).get('calories', 0) <= 200):
-                    suitable_recipes.append(recipe)
+            # Handle both dictionary and integer recipe representations
+            if isinstance(recipe, int):
+                # If recipe is just an ID, fetch the full recipe from the database
+                recipe_obj = self.db.get_recipe(recipe)
+                if recipe_obj and recipe_obj.get('category') == meal_type:
+                    primary_matches.append(recipe_obj)
+            elif isinstance(recipe, dict):
+                if recipe.get('category') == meal_type:
+                    primary_matches.append(recipe)
         
+        # If we have primary matches, prioritize those
+        if primary_matches:
+            suitable_recipes.extend(primary_matches)
+        else:
+            # Otherwise use broader criteria
+            for recipe in recipes:
+                # Handle both dictionary and integer recipe representations
+                recipe_obj = recipe
+                if isinstance(recipe, int):
+                    recipe_obj = self.db.get_recipe(recipe)
+                    if not recipe_obj:
+                        continue
+                
+                if meal_type == 'breakfast':
+                    if (recipe_obj.get('category') == 'breakfast' or 
+                        'breakfast' in recipe_obj.get('tags', []) or
+                        (recipe_obj.get('cooking_time', 0) <= 20)):
+                        suitable_recipes.append(recipe_obj)
+                
+                elif meal_type == 'lunch':
+                    if (recipe_obj.get('category') == 'main_course' or
+                        recipe_obj.get('category') == 'lunch' or
+                        recipe_obj.get('nutrition', {}).get('calories', 0) >= 300):
+                        suitable_recipes.append(recipe_obj)
+                
+                elif meal_type == 'dinner':
+                    if (recipe_obj.get('category') == 'main_course' or
+                        recipe_obj.get('category') == 'dinner' or
+                        recipe_obj.get('nutrition', {}).get('calories', 0) <= 400):
+                        suitable_recipes.append(recipe_obj)
+                
+                elif meal_type == 'snack':
+                    if (recipe_obj.get('category') == 'snack' or
+                        'snack' in recipe_obj.get('tags', []) or
+                        recipe_obj.get('nutrition', {}).get('calories', 0) <= 200):
+                        suitable_recipes.append(recipe_obj)
+        
+        # If we have suitable recipes, choose one randomly
         if suitable_recipes:
-            return random.choice(suitable_recipes)
+            selected = random.choice(suitable_recipes)
         else:
             # Fallback to any recipe
-            return random.choice(recipes) if recipes else None
-    
+            if recipes:
+                if isinstance(recipes[0], int):
+                    recipe_id = random.choice(recipes)
+                    selected = self.db.get_recipe(recipe_id)
+                else:
+                    selected = random.choice(recipes)
+            else:
+                selected = None
+        
+        # Reset the random seed to avoid affecting other randomizations
+        random.seed()
+        
+        return selected
     def _calculate_nutrition_summary(self, meal_plan):
         """Calculate total nutrition for the meal plan"""
         total_nutrition = {
@@ -357,4 +475,4 @@ class TeluguDietGenerator:
                 'దాల్ రైస్'
             ]
         
-        return suggestions 
+        return suggestions

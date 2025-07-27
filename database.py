@@ -132,6 +132,45 @@ class RecipeDatabase:
         conn.close()
         return recipes
     
+    
+    def get_recipe(self, recipe_id):
+        """Get a single recipe by ID with nutrition information"""
+        try:
+            self.cursor.execute("""
+                SELECT r.id, r.name, r.category, r.ingredients, r.instructions, r.cooking_time, r.tags,
+                       n.calories, n.protein, n.carbs, n.fat, n.fiber, n.sugar, n.sodium
+                FROM recipes r
+                JOIN nutrition n ON r.id = n.recipe_id
+                WHERE r.id = ?
+            """, (recipe_id,))
+            
+            row = self.cursor.fetchone()
+            if not row:
+                return None
+            
+            recipe_id, name, category, ingredients_json, instructions, cooking_time, tags_json,             calories, protein, carbs, fat, fiber, sugar, sodium = row
+            
+            return {
+                'id': recipe_id,
+                'name': name,
+                'category': category,
+                'ingredients': json.loads(ingredients_json),
+                'instructions': instructions,
+                'cooking_time': cooking_time,
+                'tags': json.loads(tags_json),
+                'nutrition': {
+                    'calories': calories,
+                    'protein': protein,
+                    'carbs': carbs,
+                    'fat': fat,
+                    'fiber': fiber,
+                    'sugar': sugar,
+                    'sodium': sodium
+                }
+            }
+        except Exception as e:
+            print(f"Error getting recipe: {e}")
+            return None
     def get_recipes_by_category(self, category):
         """Get recipes by category"""
         conn = sqlite3.connect(self.db_path)
@@ -287,3 +326,49 @@ class RecipeDatabase:
         
         conn.close()
         return recipes 
+    
+    def get_recipe(self, recipe_id):
+        """Get a single recipe by ID with nutrition information"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT r.id, r.name, r.category, r.ingredients, r.instructions, r.cooking_time, r.tags,
+                       n.calories, n.protein, n.carbs, n.fat, n.fiber, n.sugar, n.sodium
+                FROM recipes r
+                JOIN nutrition n ON r.id = n.recipe_id
+                WHERE r.id = ?
+            """, (recipe_id,))
+            
+            row = cursor.fetchone()
+            if not row:
+                return None
+            
+            recipe_id, name, category, ingredients_json, instructions, cooking_time, tags_json, \
+            calories, protein, carbs, fat, fiber, sugar, sodium = row
+            
+            recipe = {
+                'id': recipe_id,
+                'name': name,
+                'category': category,
+                'ingredients': json.loads(ingredients_json),
+                'instructions': instructions,
+                'cooking_time': cooking_time,
+                'tags': json.loads(tags_json) if tags_json else [],
+                'nutrition': {
+                    'calories': calories,
+                    'protein': protein,
+                    'carbs': carbs,
+                    'fat': fat,
+                    'fiber': fiber,
+                    'sugar': sugar,
+                    'sodium': sodium
+                }
+            }
+            
+            conn.close()
+            return recipe
+        except Exception as e:
+            print(f"Error getting recipe: {e}")
+            return None
