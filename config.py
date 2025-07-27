@@ -13,3 +13,10 @@ DATABASE_PATH = "telugu_recipes.db"
 # Flask Configuration
 FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'your-secret-key-here')
 FLASK_DEBUG = True 
+
+# OpenAI Configuration
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+
+# RAG System Configuration
+EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+LLM_MODEL_NAME = "gpt-3.5-turbo"

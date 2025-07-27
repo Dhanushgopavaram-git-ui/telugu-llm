@@ -1,6 +1,6 @@
-# Telugu Recipes - Traditional Cuisine with Nutrition Data
+# తెలుగు సాంప్రదాయ ఆహార సలహాదారు (Telugu Traditional Diet Assistant)
 
-A comprehensive web application for managing and discovering authentic Telugu recipes with nutrition information, structured data, and a powerful query interface.
+A comprehensive web application for managing and discovering authentic Telugu recipes with nutrition information, structured data, and a powerful query interface. Now featuring a Streamlit-based Retrieval-Augmented Generation (RAG) system that functions as a Telugu traditional diet assistant.
 
 ## ✨ Features
 
@@ -11,6 +11,10 @@ A comprehensive web application for managing and discovering authentic Telugu re
 - **Structured Format**: Organized recipe database with ingredients, instructions, and metadata
 - **Query Interface**: Beautiful web interface with search functionality
 - **Modern UI**: Responsive design with beautiful gradients and animations
+- **Streamlit RAG Application**: Interactive diet assistant with personalized recommendations
+- **Language Toggle**: Switch between Telugu and English interfaces
+- **Diet Plan Download**: Export your diet plan as text or PDF
+- **Diet Q&A**: Ask questions about Telugu traditional foods and nutrition
 
 ### 🔧 Technical Features
 - **SQLite Database**: Efficient storage and retrieval of recipes
@@ -18,6 +22,10 @@ A comprehensive web application for managing and discovering authentic Telugu re
 - **Flask Web Framework**: Fast and reliable web application
 - **Bootstrap 5**: Modern, responsive UI components
 - **RESTful API**: JSON endpoints for programmatic access
+- **Streamlit**: Interactive web application for diet planning
+- **LangChain**: LLM-powered Q&A and retrieval from recipe data
+- **FAISS/SentenceTransformer**: Vector similarity search for recipe recommendations
+- **OpenAI Integration**: Enhanced diet recommendations and Q&A
 
 ## 🚀 Quick Start
 
@@ -34,16 +42,30 @@ A comprehensive web application for managing and discovering authentic Telugu re
    pip install -r requirements.txt
    ```
 
-3. **Run the application**
+3. **Set up environment variables**
+   Create a `.env` file in the root directory with the following:
+   ```
+   NUTRITION_API_KEY=your_edamam_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   FLASK_SECRET_KEY=your_secret_key
+   ```
+   
+   Note: You can also enter your OpenAI API key directly in the Streamlit app.
+
+4. **Run the Flask application (Optional)**
    ```bash
    python app.py
    ```
-
-4. **Open your browser**
    Navigate to `http://localhost:5000`
 
 5. **Initialize the database**
    Click the "Initialize" button in the navigation to add sample recipes
+
+6. **Run the Streamlit RAG application**
+   ```bash
+   streamlit run streamlit_rag_app.py
+   ```
+   Navigate to `http://localhost:8501`
 
 ## 📁 Project Structure
 
@@ -54,6 +76,9 @@ telugu-llm/
 ├── database.py            # Database operations
 ├── nutrition_api.py       # Nutrition API integration
 ├── recipe_processor.py    # Recipe processing utilities
+├── diet_generator.py      # Rule-based diet plan generator
+├── rag_system.py          # Retrieval-Augmented Generation system
+├── streamlit_rag_app.py   # Streamlit application for diet assistant
 ├── requirements.txt       # Python dependencies
 ├── templates/            # HTML templates
 │   ├── base.html         # Base template
@@ -63,6 +88,42 @@ telugu-llm/
 │   └── search_results.html # Search results page
 └── README.md            # This file
 ```
+
+## 🌟 Using the Streamlit RAG Application
+
+The Streamlit RAG application provides an interactive interface for generating personalized Telugu diet plans and answering nutrition questions.
+
+### Diet Plan Generator
+
+1. **Select your language preference** in the sidebar (Telugu or English)
+2. **Enter your OpenAI API key** (optional, for enhanced recommendations)
+3. **Choose your dietary goal**:
+   - బరువు తగ్గాలి (Weight Loss)
+   - బరువు పెరగాలి (Weight Gain)
+   - మధుమేహం (Diabetes Friendly)
+   - శక్తివంతమైన ఆహారం (High-Energy)
+4. **Select your diet type**:
+   - శాకాహారం (Vegetarian)
+   - మాంసాహారం (Non-Vegetarian)
+5. **Specify meals per day** (3-5)
+6. **Set your daily calorie limit** (1200-3000)
+7. **Enter any allergies or exclusions**
+8. **Click "Generate Diet Plan"**
+
+The application will generate a personalized diet plan with:
+- Daily meal recommendations
+- Nutritional information
+- Health recommendations
+- Option to download as text or PDF
+
+### Diet Q&A
+
+Use the "Ask Diet Questions" tab to ask questions about Telugu traditional foods, nutrition, and dietary recommendations. The RAG system will provide answers based on the recipe database and nutritional information.
+
+Example questions:
+- "What are good Telugu breakfast options for diabetics?"
+- "How many calories are in Pulihora?"
+- "What are protein-rich vegetarian Telugu dishes?"
 
 ## 🍽️ Sample Recipes Included
 
@@ -239,5 +300,6 @@ This project is open source and available under the MIT License.
 
 ---
 
-**Enjoy cooking authentic Telugu dishes! 🍛** #   t e l u g u - l l m  
+**Enjoy cooking authentic Telugu dishes! 🍛** #   t e l u g u - l l m 
+ 
  
