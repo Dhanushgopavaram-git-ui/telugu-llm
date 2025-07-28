@@ -30,13 +30,7 @@ except Exception as e:
     st.error(f"Error loading RAG system: {e}")
     rag_system = None
 
-# Set page configuration
-st.set_page_config(
-    page_title="తెలుగు ఆహార సలహాదారు | Telugu Diet Assistant",
-    page_icon="🍲",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Page configuration is now handled in the main streamlit_app.py file
 
 # Function to toggle language
 def get_display_text(key, lang='telugu'):
@@ -81,18 +75,6 @@ def get_display_text(key, lang='telugu'):
             'telugu': 'మాంసాహారం',
             'english': 'Non-Vegetarian'
         },
-        'meals_label': {
-            'telugu': 'రోజుకు ఎన్ని భోజనాలు కావాలి:',
-            'english': 'Meals per day:'
-        },
-        'calories_label': {
-            'telugu': 'రోజుకు గరిష్ట కాలరీ పరిమితి:',
-            'english': 'Daily Calorie Limit:'
-        },
-        'allergies_label': {
-            'telugu': 'అలర్జీలు లేదా తినదగని పదార్థాలు:',
-            'english': 'Allergies or exclusions:'
-        },
         'generate_button': {
             'telugu': 'ఆహార ప్రణాళిక తయారు చేయండి',
             'english': 'Generate Diet Plan'
@@ -102,8 +84,8 @@ def get_display_text(key, lang='telugu'):
             'english': 'Diet Plan'
         },
         'nutrition_tab': {
-            'telugu': 'పోషకాల సమాచారం',
-            'english': 'Nutritional Information'
+            'telugu': 'పోషకాలు',
+            'english': 'Nutrition'
         },
         'recommendations_tab': {
             'telugu': 'సిఫార్సులు',
@@ -112,42 +94,6 @@ def get_display_text(key, lang='telugu'):
         'download_button': {
             'telugu': 'ఆహార ప్రణాళిక డౌన్‌లోడ్ చేయండి',
             'english': 'Download Diet Plan'
-        },
-        'breakfast': {
-            'telugu': 'అల్పాహారం',
-            'english': 'Breakfast'
-        },
-        'lunch': {
-            'telugu': 'మధ్యాహ్న భోజనం',
-            'english': 'Lunch'
-        },
-        'dinner': {
-            'telugu': 'రాత్రి భోజనం',
-            'english': 'Dinner'
-        },
-        'snack': {
-            'telugu': 'చిరుతిండి',
-            'english': 'Snack'
-        },
-        'calories': {
-            'telugu': 'కేలరీలు',
-            'english': 'Calories'
-        },
-        'protein': {
-            'telugu': 'ప్రోటీన్',
-            'english': 'Protein'
-        },
-        'carbs': {
-            'telugu': 'కార్బోహైడ్రేట్స్',
-            'english': 'Carbs'
-        },
-        'fat': {
-            'telugu': 'కొవ్వు',
-            'english': 'Fat'
-        },
-        'fiber': {
-            'telugu': 'ఫైబర్',
-            'english': 'Fiber'
         },
         'day': {
             'telugu': 'రోజు',
@@ -176,6 +122,42 @@ def get_display_text(key, lang='telugu'):
         'api_key_info': {
             'telugu': 'మెరుగైన సిఫార్సుల కోసం OpenAI API కీని ఉపయోగించండి',
             'english': 'Use OpenAI API key for better recommendations'
+        },
+        'meals_label': {
+            'telugu': 'రోజుకు భోజనాలు:',
+            'english': 'Meals per day:'
+        },
+        'calories_label': {
+            'telugu': 'రోజుకు కేలరీలు:',
+            'english': 'Daily calories:'
+        },
+        'allergies_label': {
+            'telugu': 'అలర్జీలు:',
+            'english': 'Allergies:'
+        },
+        'calories': {
+            'telugu': 'కేలరీలు',
+            'english': 'Calories'
+        },
+        'protein': {
+            'telugu': 'ప్రోటీన్',
+            'english': 'Protein'
+        },
+        'carbs': {
+            'telugu': 'కార్బోహైడ్రేట్లు',
+            'english': 'Carbs'
+        },
+        'fat': {
+            'telugu': 'కొవ్వు',
+            'english': 'Fat'
+        },
+        'fiber': {
+            'telugu': 'ఫైబర్',
+            'english': 'Fiber'
+        },
+        'preparation': {
+            'telugu': 'తయారీ',
+            'english': 'Preparation'
         }
     }
     

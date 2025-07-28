@@ -1,27 +1,22 @@
 import json
 import random
+import os
 from datetime import datetime, timedelta
 from database import RecipeDatabase
 from nutrition_api import NutritionAPI
 
 class TeluguDietGenerator:
     def __init__(self):
+        """Initialize the Telugu Diet Generator with non-vegetarian focus only"""
+        # Initialize database connection
         self.db = RecipeDatabase()
-        self.nutrition_api = NutritionAPI()
         
-        # Telugu diet categories and meal types
-        self.meal_types = {
-            'breakfast': 'అల్పాహారం',
-            'lunch': 'మధ్యాహ్న భోజనం',
-            'dinner': 'రాత్రి భోజనం',
-            'snack': 'చిరుతిండి'
-        }
+        # Remove any vegetarian recipe references
+        self.recipes = []  # Will be loaded from CSV
         
-        # Diet preferences in Telugu
+        # Diet preferences in Telugu - only non-vegetarian
         self.diet_preferences = {
-            'vegetarian': 'శాకాహారం',
             'non_vegetarian': 'మాంసాహారం',
-            'vegan': 'శుద్ధ శాకాహారం',
             'diabetic': 'మధుమేహం',
             'weight_loss': 'బరువు తగ్గించడం',
             'weight_gain': 'బరువు పెంచడం',
@@ -32,15 +27,321 @@ class TeluguDietGenerator:
             'immunity': 'రోగనిరోధక శక్తి'
         }
         
-        # Telugu health goals
-        self.health_goals = {
-            'energy_boost': 'శక్తి పెంపు',
-            'immunity': 'రోగనిరోధక శక్తి',
-            'digestion': 'జీర్ణక్రియ',
-            'heart_health': 'గుండె ఆరోగ్యం',
-            'bone_health': 'ఎముకల ఆరోగ్యం',
-            'brain_health': 'మెదడు ఆరోగ్యం'
+        # Meal types in Telugu
+        self.meal_types = {
+            'breakfast': 'అల్పాహారం',
+            'lunch': 'మధ్యాహ్న భోజనం',
+            'dinner': 'రాత్రి భోజనం',
+            'snack': 'చిరుతిండి'
         }
+        
+        # Health conditions and their dietary requirements
+        self.health_conditions = {
+            'diabetic': {
+                'avoid': ['high_sugar', 'refined_carbs'],
+                'prefer': ['low_glycemic', 'high_fiber', 'protein_rich']
+            },
+            'weight_loss': {
+                'avoid': ['high_calorie', 'fried'],
+                'prefer': ['low_calorie', 'high_protein', 'high_fiber']
+            },
+            'weight_gain': {
+                'avoid': ['very_low_calorie'],
+                'prefer': ['high_calorie', 'protein_rich', 'healthy_fats']
+            }
+        }
+    
+    def _load_non_veg_recipes(self):
+        """Load non-vegetarian recipes from CSV file"""
+        recipes = []
+        csv_file = os.path.join(os.path.dirname(__file__), 'non_veg_diet_recipes.csv')
+
+        try:
+            import pandas as pd
+            # Use pandas to properly handle multi-line CSV entries with proper quoting
+            df = pd.read_csv(csv_file, quotechar='"', skipinitialspace=True, encoding='utf-8')
+
+            for index, row in df.iterrows():
+                try:
+                    recipe_name = str(row['Dish']).strip()
+                    ingredients = str(row['Ingredients (with quantities)']).strip()
+                    calories = int(row['Calories']) if pd.notna(row['Calories']) else 0
+                    protein = int(row['Protein_g']) if pd.notna(row['Protein_g']) else 0
+                    carbs = int(row['Carbs_g']) if pd.notna(row['Carbs_g']) else 0
+                    fat = int(row['Fat_g']) if pd.notna(row['Fat_g']) else 0
+                    fiber = int(row['Fiber_g']) if pd.notna(row['Fiber_g']) else 0
+                    instructions = str(row['Preparation']).strip() if pd.notna(row['Preparation']) else "Cook as directed"
+
+                    recipe = {
+                        'id': f'nonveg_{index + 1}',
+                        'name': recipe_name,
+                        'ingredients': [ing.strip() for ing in ingredients.split(',')],
+                        'instructions': instructions,
+                        'preparation': instructions,  # Add preparation field for Streamlit compatibility
+                        'nutrition': {
+                            'calories': calories,
+                            'protein': protein,
+                            'carbs': carbs,
+                            'fat': fat,
+                            'fiber': fiber
+                        },
+                        'category': 'non_vegetarian',
+                        'tags': ['non_vegetarian'],
+                        'cooking_time': 30  # Default cooking time
+                    }
+
+                    recipes.append(recipe)
+
+                except Exception as e:
+                    print(f"Error parsing row {index}: {e}")
+                    continue
+
+            print(f"Successfully loaded {len(recipes)} non-vegetarian recipes from CSV")
+
+        except ImportError:
+            print("pandas not available, using fallback CSV parsing")
+            recipes = self._load_csv_fallback(csv_file)
+        except FileNotFoundError:
+            print(f"CSV file not found: {csv_file}")
+            print("Using sample non-vegetarian recipes as fallback")
+            recipes = self._create_sample_nonveg_recipes()
+        except Exception as e:
+            print(f"Error loading CSV file: {e}")
+            recipes = self._create_sample_nonveg_recipes()
+
+        return recipes
+
+    def _load_veg_recipes(self):
+        """Load vegetarian recipes from CSV file"""
+        recipes = []
+        csv_file = os.path.join(os.path.dirname(__file__), 'veg_diet_recipes.csv')
+
+        try:
+            import pandas as pd
+            # Use pandas to properly handle multi-line CSV entries with proper quoting
+            df = pd.read_csv(csv_file, quotechar='"', skipinitialspace=True, encoding='utf-8')
+
+            for index, row in df.iterrows():
+                try:
+                    recipe_name = str(row['Dish']).strip()
+                    ingredients = str(row['Ingredients']).strip()  # Note: different column name for veg recipes
+
+                    # Parse nutrition information
+                    calories = int(row['Calories']) if pd.notna(row['Calories']) else 300
+                    protein = float(row['Protein_g']) if pd.notna(row['Protein_g']) else 10
+                    carbs = float(row['Carbs_g']) if pd.notna(row['Carbs_g']) else 40
+                    fat = float(row['Fat_g']) if pd.notna(row['Fat_g']) else 10
+                    fiber = float(row['Fiber_g']) if pd.notna(row['Fiber_g']) else 5
+
+                    # Get preparation instructions
+                    preparation = str(row['Preparation']).strip() if pd.notna(row['Preparation']) else "Cook as directed"
+
+                    # Create recipe object
+                    recipe = {
+                        'id': f'veg_{index}',
+                        'name': recipe_name,
+                        'ingredients': ingredients.split(',') if ',' in ingredients else [ingredients],
+                        'nutrition': {
+                            'calories': calories,
+                            'protein': protein,
+                            'carbs': carbs,
+                            'fat': fat,
+                            'fiber': fiber
+                        },
+                        'instructions': preparation,
+                        'preparation': preparation,  # For compatibility
+                        'category': 'vegetarian',
+                        'tags': ['vegetarian'],
+                        'cooking_time': 30
+                    }
+
+                    recipes.append(recipe)
+
+                except Exception as e:
+                    print(f"Error parsing vegetarian row {index}: {e}")
+                    continue
+
+            print(f"Successfully loaded {len(recipes)} vegetarian recipes from CSV")
+
+        except ImportError:
+            print("pandas not available, using fallback CSV parsing for vegetarian recipes")
+            recipes = self._load_veg_csv_fallback(csv_file)
+        except FileNotFoundError:
+            print(f"Vegetarian CSV file not found: {csv_file}")
+            print("Using sample vegetarian recipes as fallback")
+            recipes = self._create_sample_veg_recipes()
+        except Exception as e:
+            print(f"Error loading vegetarian CSV file: {e}")
+            recipes = self._create_sample_veg_recipes()
+
+        return recipes
+
+    def _load_csv_fallback(self, csv_file):
+        """Fallback CSV parsing without pandas"""
+        recipes = []
+        try:
+            import csv
+            with open(csv_file, 'r', encoding='utf-8') as file:
+                # Read the entire file content first
+                content = file.read()
+
+                # Split by lines but handle multi-line entries
+                lines = content.split('\n')
+                current_row = []
+                in_quotes = False
+
+                for line in lines[1:]:  # Skip header
+                    if not line.strip():
+                        continue
+
+                    # Simple parsing - look for complete rows
+                    if line.count(',') >= 6 and not in_quotes:
+                        if current_row:
+                            # Process previous row
+                            self._process_csv_row(current_row, recipes, len(recipes) + 1)
+                        current_row = [line]
+                    else:
+                        if current_row:
+                            current_row.append(line)
+
+                # Process last row
+                if current_row:
+                    self._process_csv_row(current_row, recipes, len(recipes) + 1)
+
+        except Exception as e:
+            print(f"Fallback CSV parsing failed: {e}")
+            return self._create_sample_nonveg_recipes()
+
+        return recipes
+
+    def _load_veg_csv_fallback(self, csv_file):
+        """Fallback CSV parsing for vegetarian recipes without pandas"""
+        recipes = []
+        try:
+            import csv
+            with open(csv_file, 'r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for index, row in enumerate(reader):
+                    try:
+                        recipe = {
+                            'id': f'veg_{index}',
+                            'name': row['Dish'].strip(),
+                            'ingredients': row['Ingredients'].split(','),
+                            'nutrition': {
+                                'calories': int(row['Calories']) if row['Calories'] else 300,
+                                'protein': float(row['Protein_g']) if row['Protein_g'] else 10,
+                                'carbs': float(row['Carbs_g']) if row['Carbs_g'] else 40,
+                                'fat': float(row['Fat_g']) if row['Fat_g'] else 10,
+                                'fiber': float(row['Fiber_g']) if row['Fiber_g'] else 5
+                            },
+                            'instructions': row['Preparation'].strip() if row['Preparation'] else "Cook as directed",
+                            'preparation': row['Preparation'].strip() if row['Preparation'] else "Cook as directed",
+                            'category': 'vegetarian',
+                            'tags': ['vegetarian'],
+                            'cooking_time': 30
+                        }
+                        recipes.append(recipe)
+                    except Exception as e:
+                        print(f"Error parsing vegetarian fallback row {index}: {e}")
+                        continue
+        except Exception as e:
+            print(f"Vegetarian fallback CSV parsing failed: {e}")
+            return self._create_sample_veg_recipes()
+
+        return recipes
+
+    def _create_sample_veg_recipes(self):
+        """Create sample vegetarian recipes as fallback"""
+        return [
+            {
+                'id': 'veg_khichdi',
+                'name': 'Vegetable Khichdi',
+                'ingredients': ['1/2 cup rice', '1/4 cup moong dal', '1 cup mixed vegetables', 'spices'],
+                'nutrition': {'calories': 320, 'protein': 11, 'carbs': 48, 'fat': 8, 'fiber': 6},
+                'instructions': 'Cook rice and dal with vegetables and spices until soft',
+                'preparation': 'Cook rice and dal with vegetables and spices until soft',
+                'category': 'vegetarian',
+                'tags': ['vegetarian'],
+                'cooking_time': 30
+            },
+            {
+                'id': 'veg_palak_paneer',
+                'name': 'Palak Paneer',
+                'ingredients': ['200g spinach', '100g paneer', '1 onion', 'spices'],
+                'nutrition': {'calories': 280, 'protein': 14, 'carbs': 12, 'fat': 20, 'fiber': 5},
+                'instructions': 'Cook spinach with paneer and spices',
+                'preparation': 'Cook spinach with paneer and spices',
+                'category': 'vegetarian',
+                'tags': ['vegetarian'],
+                'cooking_time': 25
+            },
+            {
+                'id': 'veg_chickpea_salad',
+                'name': 'Chickpea Salad',
+                'ingredients': ['1 cup chickpeas', '1 cucumber', '1 tomato', 'lemon juice'],
+                'nutrition': {'calories': 250, 'protein': 12, 'carbs': 35, 'fat': 8, 'fiber': 10},
+                'instructions': 'Mix chickpeas with vegetables and dressing',
+                'preparation': 'Mix chickpeas with vegetables and dressing',
+                'category': 'vegetarian',
+                'tags': ['vegetarian'],
+                'cooking_time': 15
+            }
+        ]
+
+    def _process_csv_row(self, row_lines, recipes, recipe_id):
+        """Process a CSV row that might span multiple lines"""
+        try:
+            # Join all lines and try to parse
+            full_line = ' '.join(row_lines).strip()
+
+            # Simple regex-based parsing for the specific CSV format
+            import re
+
+            # Pattern to match: Name,"ingredients",calories,protein,carbs,fat,fiber,"instructions"
+            pattern = r'^([^,]+),"([^"]+)",(\d+),(\d+),(\d+),(\d+),(\d+),"(.+)"$'
+            match = re.match(pattern, full_line, re.DOTALL)
+
+            if match:
+                recipe_name = match.group(1).strip()
+                ingredients = match.group(2).strip()
+                calories = int(match.group(3))
+                protein = int(match.group(4))
+                carbs = int(match.group(5))
+                fat = int(match.group(6))
+                fiber = int(match.group(7))
+                instructions = match.group(8).strip()
+
+                recipe = {
+                    'id': f'nonveg_{recipe_id}',
+                    'name': recipe_name,
+                    'ingredients': [ing.strip() for ing in ingredients.split(',')],
+                    'instructions': instructions,
+                    'nutrition': {
+                        'calories': calories,
+                        'protein': protein,
+                        'carbs': carbs,
+                        'fat': fat,
+                        'fiber': fiber
+                    },
+                    'category': 'non_vegetarian',
+                    'tags': ['non_vegetarian'],
+                    'cooking_time': 30
+                }
+
+                recipes.append(recipe)
+
+        except Exception as e:
+            print(f"Error processing CSV row: {e}")
+            pass
+
+    def _guess_category(self, dish_name):
+        name = dish_name.lower()
+        if 'egg' in name or 'omelette' in name or 'breakfast' in name or 'toast' in name:
+            return 'breakfast'
+        elif 'chicken' in name or 'shrimp' in name or 'tuna' in name:
+            return 'lunch'
+        else:
+            return 'main_course'
     
     def generate_diet_menu(self, user_input):
         """
@@ -50,10 +351,19 @@ class TeluguDietGenerator:
             # Parse user input
             preferences = self._parse_user_input(user_input)
             
-            # Get available recipes
-            all_recipes = self.db.get_all_recipes()
+            # Get available recipes based on diet type
+            if preferences['diet_type'] == 'vegetarian':
+                all_recipes = self._load_veg_recipes()
+            elif preferences['diet_type'] == 'non_vegetarian':
+                all_recipes = self._load_non_veg_recipes()
+            else:
+                # Default to non-vegetarian for backward compatibility
+                all_recipes = self._load_non_veg_recipes()
+
+            # Ensure we have recipes loaded
+            if not all_recipes:
+                return {'error': f'No {preferences["diet_type"]} recipes available'}
             
-            # Filter recipes based on preferences
             filtered_recipes = self._filter_recipes(all_recipes, preferences)
             
             # Generate meal plan
@@ -71,8 +381,9 @@ class TeluguDietGenerator:
                 'recommendations': recommendations,
                 'preferences': preferences
             }
-            
+        
         except Exception as e:
+            print(f"Error in generate_diet_menu: {str(e)}")
             return {
                 'error': f'ఆహార పట్టిక తయారీ విఫలమైంది: {str(e)}',
                 'meal_plan': {},
@@ -83,42 +394,45 @@ class TeluguDietGenerator:
     def _parse_user_input(self, user_input):
         """Parse user input to extract preferences"""
         preferences = {
-            'diet_type': 'vegetarian',
+            'diet_type': 'non_vegetarian',  # Force non-vegetarian
             'health_goal': 'energy_boost',
-            'calorie_target': 2000,
+            'duration': 7,
             'meals_per_day': 3,
-            'allergies': [],
-            'dislikes': [],
-            'duration': 7  # days
+            'calorie_limit': 2000,
+            'calorie_target': 2000,  # Add this for compatibility
+            'allergies': []
         }
         
-        # Extract diet type
-        if any(word in user_input.lower() for word in ['non-veg', 'non veg', 'meat', 'chicken']):
-            preferences['diet_type'] = 'non_vegetarian'
-        elif any(word in user_input.lower() for word in ['vegan', 'strict vegetarian']):
-            preferences['diet_type'] = 'vegan'
+        user_input_lower = user_input.lower()
         
         # Extract health goals
-        if any(word in user_input.lower() for word in ['diabetic', 'diabetes', 'sugar']):
-            preferences['health_goal'] = 'diabetic'
-        elif any(word in user_input.lower() for word in ['weight loss', 'lose weight', 'slim']):
+        if 'weight_loss' in user_input_lower or 'weight loss' in user_input_lower:
             preferences['health_goal'] = 'weight_loss'
-        elif any(word in user_input.lower() for word in ['weight gain', 'gain weight', 'bulk']):
+        elif 'weight_gain' in user_input_lower or 'weight gain' in user_input_lower:
             preferences['health_goal'] = 'weight_gain'
-        elif any(word in user_input.lower() for word in ['protein', 'muscle']):
+        elif 'diabetic' in user_input_lower or 'diabetes' in user_input_lower:
+            preferences['health_goal'] = 'diabetic'
+        elif 'protein' in user_input_lower:
             preferences['health_goal'] = 'protein_rich'
         
-        # Extract calorie target
-        if 'calorie' in user_input.lower():
-            import re
-            calorie_match = re.search(r'(\d+)\s*calorie', user_input.lower())
-            if calorie_match:
-                preferences['calorie_target'] = int(calorie_match.group(1))
+        # Extract meals per day
+        if '4 meals' in user_input_lower:
+            preferences['meals_per_day'] = 4
+        elif '5 meals' in user_input_lower:
+            preferences['meals_per_day'] = 5
+        
+        # Extract calorie limit
+        import re
+        calorie_match = re.search(r'(\d+)\s*calories?', user_input_lower)
+        if calorie_match:
+            calorie_value = int(calorie_match.group(1))
+            preferences['calorie_limit'] = calorie_value
+            preferences['calorie_target'] = calorie_value  # Set both for compatibility
         
         # Extract duration
-        if 'week' in user_input.lower():
+        if 'week' in user_input_lower:
             preferences['duration'] = 7
-        elif 'month' in user_input.lower():
+        elif 'month' in user_input_lower:
             preferences['duration'] = 30
         
         return preferences
@@ -202,9 +516,7 @@ class TeluguDietGenerator:
         # Ensure we have enough variety by using all recipes if filtered set is too small
         if len(filtered) < 5:
             filtered = recipes
-        
-        return filtered
-        
+
         return filtered
     
     def _create_meal_plan(self, recipes, preferences):
@@ -236,29 +548,29 @@ class TeluguDietGenerator:
             # Generate meals for the day
             if preferences['meals_per_day'] >= 3:
                 for meal_type in ['breakfast', 'lunch', 'dinner']:
-                    meal = self._select_meal(recipes, meal_type, preferences)
-                    
+                    meal = self._select_meal(recipes, meal_type, selected_recipes_ids)
+
                     # Try to avoid duplicates within the same day if we have enough recipes
                     if meal and len(recipes) > preferences['meals_per_day']:
                         attempts = 0
                         while meal.get('id') in selected_recipes_ids and attempts < 3:
-                            meal = self._select_meal(recipes, meal_type, preferences)
+                            meal = self._select_meal(recipes, meal_type, selected_recipes_ids)
                             attempts += 1
-                    
+
                     meal_plan[day_key]['meals'][meal_type] = meal
                     if meal:
                         selected_recipes_ids.add(meal.get('id'))
-            
+
             if preferences['meals_per_day'] >= 4:
-                snack = self._select_meal(recipes, 'snack', preferences)
-                
+                snack = self._select_meal(recipes, 'snack', selected_recipes_ids)
+
                 # Try to avoid duplicates if possible
                 if snack and len(recipes) > preferences['meals_per_day']:
                     attempts = 0
                     while snack.get('id') in selected_recipes_ids and attempts < 3:
-                        snack = self._select_meal(recipes, 'snack', preferences)
+                        snack = self._select_meal(recipes, 'snack', selected_recipes_ids)
                         attempts += 1
-                
+
                 meal_plan[day_key]['meals']['snack'] = snack
                 if snack:
                     selected_recipes_ids.add(snack.get('id'))
@@ -269,84 +581,87 @@ class TeluguDietGenerator:
         return meal_plan
     
     
-    def _select_meal(self, recipes, meal_type, preferences):
-        """Select appropriate recipe for a meal type"""
-        import random
-        
-        # Set a different seed based on preferences to ensure different menus for different conditions
-        seed_str = f"{preferences['diet_type']}_{preferences['health_goal']}_{meal_type}"
-        seed_val = sum(ord(c) for c in seed_str)
-        random.seed(seed_val)
-        
-        suitable_recipes = []
-        
-        # First try to find recipes that match the meal type category exactly
-        primary_matches = []
-        for recipe in recipes:
-            # Handle both dictionary and integer recipe representations
-            if isinstance(recipe, int):
-                # If recipe is just an ID, fetch the full recipe from the database
-                recipe_obj = self.db.get_recipe(recipe)
-                if recipe_obj and recipe_obj.get('category') == meal_type:
-                    primary_matches.append(recipe_obj)
-            elif isinstance(recipe, dict):
-                if recipe.get('category') == meal_type:
-                    primary_matches.append(recipe)
-        
-        # If we have primary matches, prioritize those
-        if primary_matches:
-            suitable_recipes.extend(primary_matches)
+    def _select_meal(self, recipes, meal_type, used_recipes=None):
+        """Select a meal from available non-vegetarian recipes with enhanced randomization"""
+        if used_recipes is None:
+            used_recipes = set()
+
+        # Enhanced randomization with multiple entropy sources
+        import time
+        import hashlib
+
+        # Create a unique seed based on current time, meal type, and used recipes
+        entropy_string = f"{time.time()}_{meal_type}_{len(used_recipes)}_{random.random()}"
+        seed_hash = hashlib.md5(entropy_string.encode()).hexdigest()
+        seed_value = int(seed_hash[:8], 16) % 100000
+        random.seed(seed_value)
+
+        # Enhanced filtering for better variety
+        # 1. First try recipes not used in this session
+        available_recipes = [r for r in recipes if r['id'] not in used_recipes]
+
+        # 2. If we have enough unused recipes, use them
+        if len(available_recipes) >= 3:
+            pass  # Use unused recipes
         else:
-            # Otherwise use broader criteria
-            for recipe in recipes:
-                # Handle both dictionary and integer recipe representations
-                recipe_obj = recipe
-                if isinstance(recipe, int):
-                    recipe_obj = self.db.get_recipe(recipe)
-                    if not recipe_obj:
-                        continue
-                
-                if meal_type == 'breakfast':
-                    if (recipe_obj.get('category') == 'breakfast' or 
-                        'breakfast' in recipe_obj.get('tags', []) or
-                        (recipe_obj.get('cooking_time', 0) <= 20)):
-                        suitable_recipes.append(recipe_obj)
-                
-                elif meal_type == 'lunch':
-                    if (recipe_obj.get('category') == 'main_course' or
-                        recipe_obj.get('category') == 'lunch' or
-                        recipe_obj.get('nutrition', {}).get('calories', 0) >= 300):
-                        suitable_recipes.append(recipe_obj)
-                
-                elif meal_type == 'dinner':
-                    if (recipe_obj.get('category') == 'main_course' or
-                        recipe_obj.get('category') == 'dinner' or
-                        recipe_obj.get('nutrition', {}).get('calories', 0) <= 400):
-                        suitable_recipes.append(recipe_obj)
-                
-                elif meal_type == 'snack':
-                    if (recipe_obj.get('category') == 'snack' or
-                        'snack' in recipe_obj.get('tags', []) or
-                        recipe_obj.get('nutrition', {}).get('calories', 0) <= 200):
-                        suitable_recipes.append(recipe_obj)
-        
-        # If we have suitable recipes, choose one randomly
-        if suitable_recipes:
-            selected = random.choice(suitable_recipes)
-        else:
-            # Fallback to any recipe
-            if recipes:
-                if isinstance(recipes[0], int):
-                    recipe_id = random.choice(recipes)
-                    selected = self.db.get_recipe(recipe_id)
-                else:
-                    selected = random.choice(recipes)
+            # 3. If running low on unused recipes, include all but prefer unused ones
+            unused_recipes = [r for r in recipes if r['id'] not in used_recipes]
+            used_recipes_list = [r for r in recipes if r['id'] in used_recipes]
+
+            # Shuffle both lists for randomness
+            random.shuffle(unused_recipes)
+            random.shuffle(used_recipes_list)
+
+            # Combine with unused recipes first
+            available_recipes = unused_recipes + used_recipes_list
+
+        if not available_recipes:
+            available_recipes = recipes  # Reset if all recipes used
+
+        # Shuffle the available recipes for better variety
+        random.shuffle(available_recipes)
+
+        # Select based on meal type preferences
+        if meal_type == 'breakfast':
+            # Prefer lighter, egg-based dishes for breakfast
+            breakfast_preferred = [r for r in available_recipes
+                                 if any(word in r['name'].lower()
+                                       for word in ['egg', 'omelet', 'boiled'])]
+            if breakfast_preferred:
+                selected = random.choice(breakfast_preferred)
             else:
-                selected = None
-        
-        # Reset the random seed to avoid affecting other randomizations
-        random.seed()
-        
+                selected = random.choice(available_recipes)
+
+        elif meal_type == 'lunch':
+            # Prefer heartier dishes for lunch
+            lunch_preferred = [r for r in available_recipes
+                              if r['nutrition']['calories'] >= 300]
+            if lunch_preferred:
+                selected = random.choice(lunch_preferred)
+            else:
+                selected = random.choice(available_recipes)
+
+        elif meal_type == 'dinner':
+            # Prefer moderate calorie dishes for dinner
+            dinner_preferred = [r for r in available_recipes
+                               if 250 <= r['nutrition']['calories'] <= 400]
+            if dinner_preferred:
+                selected = random.choice(dinner_preferred)
+            else:
+                selected = random.choice(available_recipes)
+
+        elif meal_type == 'snack':
+            # Prefer lighter dishes for snacks
+            snack_preferred = [r for r in available_recipes
+                              if r['nutrition']['calories'] < 300]
+            if snack_preferred:
+                selected = random.choice(snack_preferred)
+            else:
+                selected = random.choice(available_recipes)
+
+        else:
+            selected = random.choice(available_recipes)
+
         return selected
     def _calculate_nutrition_summary(self, meal_plan):
         """Calculate total nutrition for the meal plan"""
@@ -370,11 +685,31 @@ class TeluguDietGenerator:
                             total_nutrition[key] += meal['nutrition'][key]
                     meal_count += 1
         
-        # Calculate averages
+        # Calculate averages per meal and per day
+        days_count = len(meal_plan)
+
         if meal_count > 0:
+            avg_per_meal = {}
+            avg_per_day = {}
+
             for key in total_nutrition:
-                total_nutrition[key] = round(total_nutrition[key] / meal_count, 1)
-        
+                avg_per_meal[key] = round(total_nutrition[key] / meal_count, 1)
+                avg_per_day[key] = round(total_nutrition[key] / days_count, 1) if days_count > 0 else 0
+
+            # Return both formats for compatibility
+            return {
+                **avg_per_meal,  # For backward compatibility
+                'avg_calories_per_day': avg_per_day['calories'],
+                'avg_protein_per_day': avg_per_day['protein'],
+                'avg_carbs_per_day': avg_per_day['carbs'],
+                'avg_fat_per_day': avg_per_day['fat'],
+                'avg_fiber_per_day': avg_per_day['fiber'],
+                'total_calories': total_nutrition['calories'],
+                'total_protein': total_nutrition['protein'],
+                'meal_count': meal_count,
+                'days_count': days_count
+            }
+
         return total_nutrition
     
     def _generate_telugu_recommendations(self, preferences):
@@ -476,3 +811,88 @@ class TeluguDietGenerator:
             ]
         
         return suggestions
+
+    def _create_sample_nonveg_recipes(self):
+        """Create sample non-vegetarian recipes as fallback - NO VEGETARIAN RECIPES"""
+        return [
+            {
+                'id': 'nonveg_chicken_curry',
+                'name': 'Chicken Curry',
+                'ingredients': ['500g chicken', '2 onions', '3 tomatoes', '1 tbsp ginger-garlic paste', 'spices'],
+                'nutrition': {'calories': 350, 'protein': 25, 'carbs': 15, 'fat': 20, 'fiber': 3},
+                'instructions': 'Cook chicken with spices and vegetables until tender',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 45
+            },
+            {
+                'id': 'nonveg_egg_curry',
+                'name': 'Egg Curry',
+                'ingredients': ['6 eggs', '2 onions', '2 tomatoes', '1 tbsp oil', 'curry leaves'],
+                'nutrition': {'calories': 280, 'protein': 18, 'carbs': 12, 'fat': 18, 'fiber': 2},
+                'instructions': 'Boil eggs and cook in spicy gravy',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 30
+            },
+            {
+                'id': 'nonveg_fish_fry',
+                'name': 'Fish Fry',
+                'ingredients': ['500g fish', '1 tbsp red chili powder', '1 tsp turmeric', 'oil for frying'],
+                'nutrition': {'calories': 320, 'protein': 30, 'carbs': 5, 'fat': 18, 'fiber': 1},
+                'instructions': 'Marinate fish and deep fry until golden',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 25
+            },
+            {
+                'id': 'nonveg_mutton_biryani',
+                'name': 'Mutton Biryani',
+                'ingredients': ['500g mutton', '2 cups basmati rice', '1 cup yogurt', 'biryani spices'],
+                'nutrition': {'calories': 450, 'protein': 28, 'carbs': 45, 'fat': 22, 'fiber': 2},
+                'instructions': 'Layer cooked mutton and rice, cook on dum',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 90
+            },
+            {
+                'id': 'nonveg_egg_omelet',
+                'name': 'Masala Omelet',
+                'ingredients': ['3 eggs', '1 onion', '2 green chilies', '1 tomato', 'coriander leaves'],
+                'nutrition': {'calories': 220, 'protein': 15, 'carbs': 8, 'fat': 14, 'fiber': 2},
+                'instructions': 'Beat eggs with vegetables and cook as omelet',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 10
+            },
+            {
+                'id': 'nonveg_chicken_biryani',
+                'name': 'Chicken Biryani',
+                'ingredients': ['500g chicken', '2 cups basmati rice', '1 cup yogurt', 'biryani spices'],
+                'nutrition': {'calories': 420, 'protein': 26, 'carbs': 42, 'fat': 18, 'fiber': 2},
+                'instructions': 'Layer cooked chicken and rice, cook on dum',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 75
+            },
+            {
+                'id': 'nonveg_prawn_curry',
+                'name': 'Prawn Curry',
+                'ingredients': ['500g prawns', '1 coconut', '2 onions', '3 tomatoes', 'curry spices'],
+                'nutrition': {'calories': 300, 'protein': 22, 'carbs': 18, 'fat': 16, 'fiber': 3},
+                'instructions': 'Cook prawns in coconut curry',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 35
+            },
+            {
+                'id': 'nonveg_chicken_tikka',
+                'name': 'Chicken Tikka',
+                'ingredients': ['500g chicken', '1 cup yogurt', '1 tbsp garam masala', '1 tbsp ginger-garlic paste'],
+                'nutrition': {'calories': 290, 'protein': 35, 'carbs': 8, 'fat': 12, 'fiber': 1},
+                'instructions': 'Marinate chicken and grill until cooked',
+                'category': 'non_vegetarian',
+                'tags': ['non_vegetarian'],
+                'cooking_time': 40
+            }
+        ]
